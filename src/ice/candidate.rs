@@ -401,8 +401,8 @@ impl Candidate {
         self.local_preference = Some(v);
     }
 
-    pub(crate) fn set_discarded(&mut self) {
-        self.discarded = true;
+    pub(crate) fn set_discarded(&mut self, discarded: bool) {
+        self.discarded = discarded;
     }
 
     /// Whether the candidate has been discarded.

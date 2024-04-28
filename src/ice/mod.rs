@@ -76,6 +76,7 @@ mod test {
     use crate::io::{Protocol, StunMessage, StunPacket, STUN_TIMEOUT};
     use tracing::Span;
     use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::util::SubscriberInitExt;
 
     pub fn sock(s: impl Into<String>) -> SocketAddr {
         let s: String = s.into();
@@ -301,6 +302,154 @@ mod test {
         );
 
         assert!(a1.poll_transmit().is_none());
+    }
+
+    #[test]
+    pub fn migrates_to_new_candidates_after_invalidation_without_timeout() {
+        let _guard = tracing_subscriber::fmt()
+            .with_env_filter("debug")
+            .with_test_writer()
+            .set_default();
+
+        let mut a1 = TestAgent::new(info_span!("L"));
+        let mut a2 = TestAgent::new(info_span!("R"));
+
+        let c1 = host("1.1.1.1:1000", "udp");
+        a1.add_local_candidate(c1.clone());
+        a2.add_remote_candidate(c1.clone());
+
+        let c2 = host("2.2.2.2:1000", "udp");
+        a1.add_remote_candidate(c2.clone());
+        a2.add_local_candidate(c2.clone());
+
+        a1.set_controlling(true);
+        a2.set_controlling(false);
+
+        loop {
+            if a1.state().is_connected() && a2.state().is_connected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+
+        let a1_time = a1.time;
+        let a2_time = a2.time;
+        let new_sock = sock("8.8.8.8:1000");
+
+        let c3 = Candidate::host(new_sock, Protocol::Udp).unwrap();
+        a1.add_local_candidate(c3.clone());
+        a2.add_remote_candidate(c3);
+
+        a1.agent.invalidate_candidate(&c1);
+        a2.agent.invalidate_candidate(&c1);
+
+        loop {
+            let a1_nominated = a1.has_event(
+                |e| matches!(e, IceAgentEvent::NominatedSend { source, .. } if source == &new_sock),
+            );
+            let a2_nominated = a2.has_event(
+                |e| matches!(e, IceAgentEvent::NominatedSend { destination, .. } if destination == &new_sock)
+            );
+
+            if a1_nominated && a2_nominated {
+                break;
+            }
+
+            progress(&mut a1, &mut a2);
+        }
+
+        assert!(a1.time.duration_since(a1_time) < STUN_TIMEOUT);
+        assert!(a2.time.duration_since(a2_time) < STUN_TIMEOUT);
+    }
+
+    #[test]
+    pub fn re_adding_invalidated_local_candidate() {
+        let mut a1 = TestAgent::new(info_span!("L"));
+        let mut a2 = TestAgent::new(info_span!("R"));
+
+        let c1 = host("1.1.1.1:1000", "udp");
+        a1.add_local_candidate(c1.clone());
+        a2.add_remote_candidate(c1.clone());
+        let c2 = host("2.2.2.2:1000", "udp");
+        a2.add_local_candidate(c2.clone());
+        a1.add_remote_candidate(c2);
+        a1.set_controlling(true);
+        a2.set_controlling(false);
+
+        loop {
+            if a1.state().is_connected() && a2.state().is_connected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+
+        a1.agent.invalidate_candidate(&c1);
+
+        // Let time pass until it disconnects.
+        loop {
+            if a1.state().is_disconnected() && a2.state().is_disconnected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+
+        // Add back the invalidated candidate
+        a1.add_local_candidate(c1);
+
+        // progress() fails after 100 number of polls.
+        a1.progress_count = 0;
+        a2.progress_count = 0;
+        loop {
+            if a1.state().is_connected() && a2.state().is_connected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+    }
+
+    #[test]
+    pub fn re_adding_invalidated_remote_candidate() {
+        let mut a1 = TestAgent::new(info_span!("L"));
+        let mut a2 = TestAgent::new(info_span!("R"));
+
+        let c1 = host("1.1.1.1:1000", "udp");
+        a1.add_local_candidate(c1.clone());
+        a2.add_remote_candidate(c1);
+        let c2 = host("2.2.2.2:1000", "udp");
+        a2.add_local_candidate(c2.clone());
+        a1.add_remote_candidate(c2.clone());
+        a1.set_controlling(true);
+        a2.set_controlling(false);
+
+        loop {
+            if a1.state().is_connected() && a2.state().is_connected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+
+        a1.agent.invalidate_candidate(&c2);
+
+        // Let time pass until it disconnects.
+        loop {
+            if a1.state().is_disconnected() && a2.state().is_disconnected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
+
+        // Add back the invalidated candidate
+        a1.add_remote_candidate(c2);
+
+        // progress() fails after 100 number of polls.
+        a1.progress_count = 0;
+        a2.progress_count = 0;
+        loop {
+            if a1.state().is_connected() && a2.state().is_connected() {
+                break;
+            }
+            progress(&mut a1, &mut a2);
+        }
     }
 
     #[test]

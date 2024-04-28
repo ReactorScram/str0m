@@ -2,6 +2,8 @@ use std::collections::{HashSet, VecDeque};
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 
+use serde::{Deserialize, Serialize};
+
 use crate::io::{Id, StunClass, StunMethod, DATAGRAM_MTU_WARN};
 use crate::io::{Protocol, StunPacket};
 use crate::io::{StunMessage, TransId, STUN_TIMEOUT};
@@ -20,7 +22,8 @@ const TIMING_ADVANCE: Duration = Duration::from_millis(50);
 /// Handles the ICE protocol for a given peer.
 ///
 /// Each connection between two peers corresponds to one [`IceAgent`] on either end.
-/// To form connections to multiple peers, a peer needs to create a dedicated [`IceAgent`] for each one.
+/// To form connections to multiple peers, a peer needs to create a dedicated [`IceAgent`] for
+/// each one.
 #[derive(Debug)]
 pub struct IceAgent {
     /// Last time handle_timeout run (paced by timing_advance).
@@ -162,7 +165,7 @@ impl IceConnectionState {
 /// Credentials for STUN packages.
 ///
 /// By matching IceCreds in STUN to SDP, we know which STUN belongs to which Peer.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IceCreds {
     /// From a=ice-ufrag
     pub ufrag: String,
@@ -467,37 +470,52 @@ impl IceAgent {
 
         c.set_local_preference(pref);
 
+        // Tie this ufrag to this ICE-session.
+        c.set_ufrag(&self.local_credentials.ufrag);
+
         // A candidate is redundant if and only if its transport address and base equal those
         // of another candidate.  The agent SHOULD eliminate the redundant
         // candidate with the lower priority.
         //
         // NB this must be done _after_ set_local_preference(), since the prio() used in the
         // elimination is calculated from that preference.
-        if let Some((idx, other)) =
+        let maybe_redundant =
             self.local_candidates.iter_mut().enumerate().find(|(_, v)| {
                 v.addr() == c.addr() && v.base() == c.base() && v.proto() == c.proto()
-            })
-        {
-            if c.prio() < other.prio() {
-                // The new candidate is not better than what we already got.
+            });
+
+        let local_idx = if let Some((idx, other)) = maybe_redundant {
+            if other.discarded() && c.kind() == other.kind() && c.raddr() == other.raddr() {
+                debug!("Re-enable previously discarded local: {:?}", other);
+                other.set_discarded(false);
+                idx
+            } else {
+                if c.prio() < other.prio() {
+                    // The new candidate is not better than what we already got.
+                    debug!(
+                        "Reject redundant candidate, current: {:?} rejected: {:?}",
+                        other, c
+                    );
+                    return false;
+                }
+
+                // Stop using the current candidate in favor of the new one.
                 debug!(
-                    "Reject redundant candidate, current: {:?} rejected: {:?}",
+                    "Replace redundant candidate, current: {:?} replaced with: {:?}",
                     other, c
                 );
-                return false;
+                other.set_discarded(true);
+                self.discard_candidate_pairs_by_local(idx);
+
+                info!("Add local candidate: {:?}", c);
+                self.local_candidates.push(c);
+                self.local_candidates.len() - 1
             }
-
-            // Stop using the current candidate in favor of the new one.
-            debug!(
-                "Replace redundant candidate, current: {:?} replaced with: {:?}",
-                other, c
-            );
-            other.set_discarded();
-            self.discard_candidate_pairs_by_local(idx);
-        }
-
-        // Tie this ufrag to this ICE-session.
-        c.set_ufrag(&self.local_credentials.ufrag);
+        } else {
+            info!("Add local candidate: {:?}", c);
+            self.local_candidates.push(c);
+            self.local_candidates.len() - 1
+        };
 
         // These are the indexes of the remote candidates this candidate should be paired with.
         let remote_idxs: Vec<_> = self
@@ -508,12 +526,6 @@ impl IceAgent {
             .map(|(i, _)| i)
             .collect();
 
-        info!("Add local candidate: {:?}", c);
-
-        self.local_candidates.push(c);
-
-        let local_idxs = [self.local_candidates.len() - 1];
-
         // We always run in trickle ice mode.
         //
         // https://www.rfc-editor.org/rfc/rfc8838.html#section-10
@@ -523,7 +535,7 @@ impl IceAgent {
         // TODO: The trickle ice spec is strange. What does it mean "has been trickled to the
         // remote party"? Since we don't get a confirmation that the candidate has been received
         // by the remote party, whether we form local pairs directly or later seems irrelevant.
-        self.form_pairs(&local_idxs, &remote_idxs);
+        self.form_pairs(&[local_idx], &remote_idxs);
 
         true
     }
@@ -579,10 +591,25 @@ impl IceAgent {
             *existing = c;
             idx
         } else {
-            info!("Add remote candidate: {:?}", c);
+            let maybe_discarded = self.remote_candidates.iter().position(|o| {
+                o.discarded()
+                    && c.addr() == o.addr()
+                    && c.base() == o.base()
+                    && c.proto() == o.proto()
+                    && c.kind() == o.kind()
+                    && c.raddr() == o.raddr()
+            });
 
-            self.remote_candidates.push(c);
-            self.remote_candidates.len() - 1
+            if let Some(idx) = maybe_discarded {
+                let other = &mut self.remote_candidates[idx];
+                debug!("Re-enable previously discarded remote: {:?}", other);
+                other.set_discarded(false);
+                idx
+            } else {
+                info!("Add remote candidate: {:?}", c);
+                self.remote_candidates.push(c);
+                self.remote_candidates.len() - 1
+            }
         };
 
         // These are the indexes of the local candidates this candidate should be paired with.
@@ -708,7 +735,7 @@ impl IceAgent {
         }) {
             if !other.discarded() {
                 info!("Local candidate to discard {:?}", other);
-                other.set_discarded();
+                other.set_discarded(true);
                 self.discard_candidate_pairs_by_local(idx);
                 return true;
             }
@@ -727,7 +754,7 @@ impl IceAgent {
         {
             if !other.discarded() {
                 info!("Remote candidate to discard {:?}", other);
-                other.set_discarded();
+                other.set_discarded(true);
                 self.discard_candidate_pairs_by_remote(idx);
                 return true;
             }
@@ -899,7 +926,8 @@ impl IceAgent {
 
     /// Provide the current time to the [`IceAgent`].
     ///
-    /// Typically, you will want to call [`IceAgent::poll_timeout`] and "wake-up" the agent once that time is reached.
+    /// Typically, you will want to call [`IceAgent::poll_timeout`] and "wake-up"
+    /// the agent once that time is reached.
     pub fn handle_timeout(&mut self, now: Instant) {
         // This happens exactly once because evaluate_state() below will
         // switch away from New -> Checking.
@@ -1167,6 +1195,18 @@ impl IceAgent {
             trace!("Remote candidate for STUN request found");
             idx
         } else {
+            let maybe_discarded = self
+                .remote_candidates
+                .iter()
+                .any(|c| c.discarded() && c.proto() == req.proto && c.addr() == req.source);
+
+            if maybe_discarded {
+                // The remote has been discarded, we do not want to create a
+                // peer reflexive in this case.
+                trace!("STUN request ignored because remote candidate is discarded");
+                return;
+            }
+
             // o  The priority is the value of the PRIORITY attribute in the Binding
             //     request.
             //
@@ -1212,8 +1252,10 @@ impl IceAgent {
         }) {
             Some((i, _)) => i,
             None => {
-                // Receiving traffic for an IP address that neither is a HOST nor RELAY is most likely a configuration fault where the user forgot to add a candidate for the local interface.
-                // We are network-connected application so we need to handle this gracefully: Log a message and discard the packet.
+                // Receiving traffic for an IP address that neither is a HOST nor RELAY
+                // is most likely a configuration fault where the user forgot to add a
+                // candidate for the local interface. We are network-connected application
+                // so we need to handle this gracefully: Log a message and discard the packet.
 
                 debug!(
                     "Discarding STUN request on unknown interface: {}",
@@ -1604,7 +1646,6 @@ impl IceAgent {
 mod test {
     use super::*;
     use std::net::SocketAddr;
-    use std::sync::Once;
 
     impl IceAgent {
         fn pair_indexes(&self) -> Vec<(usize, usize)> {
@@ -1808,22 +1849,6 @@ mod test {
 
     #[test]
     fn form_pairs_replace_remote_redundant() {
-        use std::env;
-        use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-        if env::var("RUST_LOG").is_err() {
-            env::set_var("RUST_LOG", "debug");
-        }
-
-        static START: Once = Once::new();
-
-        START.call_once(|| {
-            tracing_subscriber::registry()
-                .with(fmt::layer())
-                .with(EnvFilter::from_default_env())
-                .init();
-        });
-
         let mut agent = IceAgent::new();
         agent.set_ice_lite(true);
 
@@ -1856,6 +1881,36 @@ mod test {
         assert!(pair.is_nominated());
         assert_eq!(pair.remote_binding_requests, 1);
         assert_eq!(pair.remote_binding_request_time, Some(now));
+    }
+
+    #[test]
+    fn form_pairs_skip_invalidated_local() {
+        let mut agent = IceAgent::new();
+
+        let local = Candidate::test_peer_rflx(ipv4_2(), ipv4_1(), "udp");
+
+        agent.add_local_candidate(local.clone());
+        agent.invalidate_candidate(&local);
+
+        agent.add_remote_candidate(Candidate::host(ipv4_3(), "udp").unwrap());
+
+        // There should be no pairs since we invalidated the local candidate.
+        assert_eq!(agent.pair_indexes(), []);
+    }
+
+    #[test]
+    fn form_pairs_skip_invalidated_remote() {
+        let mut agent = IceAgent::new();
+
+        let remote = Candidate::host(ipv4_3(), "udp").unwrap();
+
+        agent.add_remote_candidate(remote.clone());
+        agent.invalidate_candidate(&remote);
+
+        agent.add_local_candidate(Candidate::test_peer_rflx(ipv4_2(), ipv4_1(), "udp"));
+
+        // There should be no pairs since we invalidated the local candidate.
+        assert_eq!(agent.pair_indexes(), []);
     }
 
     #[test]
