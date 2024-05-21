@@ -16,8 +16,7 @@ use super::pair::{CandidatePair, CheckState, PairId};
 /// Handles the ICE protocol for a given peer.
 ///
 /// Each connection between two peers corresponds to one [`IceAgent`] on either end.
-/// To form connections to multiple peers, a peer needs to create a dedicated [`IceAgent`] for
-/// each one.
+/// To form connections to multiple peers, a peer needs to create a dedicated [`IceAgent`] for each one.
 #[derive(Debug)]
 pub struct IceAgent {
     /// Last time handle_timeout run (paced by timing_advance).
@@ -481,52 +480,37 @@ impl IceAgent {
 
         c.set_local_preference(pref);
 
-        // Tie this ufrag to this ICE-session.
-        c.set_ufrag(&self.local_credentials.ufrag);
-
         // A candidate is redundant if and only if its transport address and base equal those
         // of another candidate.  The agent SHOULD eliminate the redundant
         // candidate with the lower priority.
         //
         // NB this must be done _after_ set_local_preference(), since the prio() used in the
         // elimination is calculated from that preference.
-        let maybe_redundant =
+        if let Some((idx, other)) =
             self.local_candidates.iter_mut().enumerate().find(|(_, v)| {
                 v.addr() == c.addr() && v.base() == c.base() && v.proto() == c.proto()
-            });
-
-        let local_idx = if let Some((idx, other)) = maybe_redundant {
-            if other.discarded() && c.kind() == other.kind() && c.raddr() == other.raddr() {
-                debug!("Re-enable previously discarded local: {:?}", other);
-                other.set_discarded(false);
-                idx
-            } else {
-                if c.prio() < other.prio() {
-                    // The new candidate is not better than what we already got.
-                    debug!(
-                        "Reject redundant candidate, current: {:?} rejected: {:?}",
-                        other, c
-                    );
-                    return false;
-                }
-
-                // Stop using the current candidate in favor of the new one.
+            })
+        {
+            if c.prio() < other.prio() {
+                // The new candidate is not better than what we already got.
                 debug!(
-                    "Replace redundant candidate, current: {:?} replaced with: {:?}",
+                    "Reject redundant candidate, current: {:?} rejected: {:?}",
                     other, c
                 );
-                other.set_discarded(true);
-                self.discard_candidate_pairs_by_local(idx);
-
-                info!("Add local candidate: {:?}", c);
-                self.local_candidates.push(c);
-                self.local_candidates.len() - 1
+                return false;
             }
-        } else {
-            info!("Add local candidate: {:?}", c);
-            self.local_candidates.push(c);
-            self.local_candidates.len() - 1
-        };
+
+            // Stop using the current candidate in favor of the new one.
+            debug!(
+                "Replace redundant candidate, current: {:?} replaced with: {:?}",
+                other, c
+            );
+            other.set_discarded(true);
+            self.discard_candidate_pairs_by_local(idx);
+        }
+
+        // Tie this ufrag to this ICE-session.
+        c.set_ufrag(&self.local_credentials.ufrag);
 
         // These are the indexes of the remote candidates this candidate should be paired with.
         let remote_idxs: Vec<_> = self
@@ -537,6 +521,12 @@ impl IceAgent {
             .map(|(i, _)| i)
             .collect();
 
+        info!("Add local candidate: {:?}", c);
+
+        self.local_candidates.push(c);
+
+        let local_idxs = [self.local_candidates.len() - 1];
+
         // We always run in trickle ice mode.
         //
         // https://www.rfc-editor.org/rfc/rfc8838.html#section-10
@@ -546,7 +536,7 @@ impl IceAgent {
         // TODO: The trickle ice spec is strange. What does it mean "has been trickled to the
         // remote party"? Since we don't get a confirmation that the candidate has been received
         // by the remote party, whether we form local pairs directly or later seems irrelevant.
-        self.form_pairs(&[local_idx], &remote_idxs);
+        self.form_pairs(&local_idxs, &remote_idxs);
 
         true
     }
@@ -602,25 +592,10 @@ impl IceAgent {
             *existing = c;
             idx
         } else {
-            let maybe_discarded = self.remote_candidates.iter().position(|o| {
-                o.discarded()
-                    && c.addr() == o.addr()
-                    && c.base() == o.base()
-                    && c.proto() == o.proto()
-                    && c.kind() == o.kind()
-                    && c.raddr() == o.raddr()
-            });
+            info!("Add remote candidate: {:?}", c);
 
-            if let Some(idx) = maybe_discarded {
-                let other = &mut self.remote_candidates[idx];
-                debug!("Re-enable previously discarded remote: {:?}", other);
-                other.set_discarded(false);
-                idx
-            } else {
-                info!("Add remote candidate: {:?}", c);
-                self.remote_candidates.push(c);
-                self.remote_candidates.len() - 1
-            }
+            self.remote_candidates.push(c);
+            self.remote_candidates.len() - 1
         };
 
         // These are the indexes of the local candidates this candidate should be paired with.
@@ -937,8 +912,7 @@ impl IceAgent {
 
     /// Provide the current time to the [`IceAgent`].
     ///
-    /// Typically, you will want to call [`IceAgent::poll_timeout`] and "wake-up"
-    /// the agent once that time is reached.
+    /// Typically, you will want to call [`IceAgent::poll_timeout`] and "wake-up" the agent once that time is reached.
     pub fn handle_timeout(&mut self, now: Instant) {
         // This happens exactly once because evaluate_state() below will
         // switch away from New -> Checking.
@@ -1263,10 +1237,8 @@ impl IceAgent {
         }) {
             Some((i, _)) => i,
             None => {
-                // Receiving traffic for an IP address that neither is a HOST nor RELAY
-                // is most likely a configuration fault where the user forgot to add a
-                // candidate for the local interface. We are network-connected application
-                // so we need to handle this gracefully: Log a message and discard the packet.
+                // Receiving traffic for an IP address that neither is a HOST nor RELAY is most likely a configuration fault where the user forgot to add a candidate for the local interface.
+                // We are network-connected application so we need to handle this gracefully: Log a message and discard the packet.
 
                 debug!(
                     "Discarding STUN request on unknown interface: {}",
