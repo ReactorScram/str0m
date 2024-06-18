@@ -34,13 +34,6 @@ hmac = "0.12.1"
 crc = "3.0.0"
 serde = { version = "1.0.152", features = ["derive"] }
 
-[target.'cfg(unix)'.dependencies]
-sha1 = { version = "0.10.6", features = ["asm"] }
-
-# Don't use `asm` on Windows until https://github.com/RustCrypto/asm-hashes/issues/45 is fixed.
-# The `asm` feature isn't compatible with `windows-msvc` toolchain and `openssl` breaks if we want to use `windows-gnu`.
-# Thus, don't use `asm` feature on Windows.
-[target.'cfg(windows)'.dependencies]
 sha1 = { version = "0.10.6" }
 
 [dev-dependencies]
