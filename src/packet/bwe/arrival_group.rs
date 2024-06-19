@@ -1,5 +1,5 @@
 use std::mem;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::rtp_::SeqNo;
 
@@ -212,7 +212,7 @@ pub(super) struct InterGroupDelayDelta {
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use crate::rtp_::DataSize;
 

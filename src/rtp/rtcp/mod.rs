@@ -469,7 +469,7 @@ fn pad_bytes_to_word(n: usize) -> usize {
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use crate::rtp_::MediaTime;
 

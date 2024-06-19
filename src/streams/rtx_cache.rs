@@ -1,5 +1,5 @@
-use std::time::Duration;
-use std::time::Instant;
+use instant::Duration;
+use instant::Instant;
 
 use crate::io::DATAGRAM_MAX_PACKET_SIZE;
 use crate::rtp_::SeqNo;

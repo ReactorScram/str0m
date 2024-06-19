@@ -1,5 +1,5 @@
 use std::fmt;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::rtp_::Bitrate;
 
@@ -350,7 +350,7 @@ impl MovingAverage {
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
+    use instant::Duration;
 
     use super::{RateControl, Signal, State};
 
@@ -382,7 +382,7 @@ mod test {
     }
 
     mod rate_controller {
-        use std::time::Instant;
+        use instant::Instant;
 
         use super::{duration_ms, RateControl, Signal};
 

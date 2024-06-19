@@ -1,7 +1,7 @@
 //! Media (audio/video) related content.
 
 use std::collections::{HashMap, VecDeque};
-use std::time::Instant;
+use instant::Instant;
 
 use crate::change::AddMedia;
 use crate::format::CodecConfig;

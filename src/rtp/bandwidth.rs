@@ -1,7 +1,7 @@
 use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
-use std::time::Duration;
+use instant::Duration;
 
 /// A data rate expressed as bits per second(bps).
 ///
@@ -239,7 +239,7 @@ impl fmt::Display for DataSize {
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
+    use instant::Duration;
 
     use super::{Bitrate, DataSize};
 

@@ -1,4 +1,4 @@
-use std::time::Instant;
+use instant::Instant;
 
 use crate::rtp_::MediaTime;
 use crate::util::InstantExt;

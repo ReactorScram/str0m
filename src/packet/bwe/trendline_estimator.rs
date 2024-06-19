@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use super::{BandwithUsage, InterGroupDelayDelta};
 
@@ -290,7 +290,7 @@ struct Overuse {
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use crate::packet::bwe::BandwithUsage;
 

@@ -1,6 +1,6 @@
 use std::fmt;
 use std::ops::RangeInclusive;
-use std::time::Instant;
+use instant::Instant;
 
 use crate::packet::MediaKind;
 use crate::rtp_::{Direction, ExtensionValues, MediaTime, Mid, Pt, Rid, SenderInfo, SeqNo};

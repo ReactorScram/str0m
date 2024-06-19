@@ -1,6 +1,6 @@
 use std::time::SystemTime;
-use std::time::{Duration, Instant};
 
+use instant::{Duration, Instant};
 use once_cell::sync::Lazy;
 
 pub(crate) fn not_happening() -> Instant {

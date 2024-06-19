@@ -1,4 +1,4 @@
-use std::time::Instant;
+use instant::Instant;
 
 use crate::rtp_::{Nack, ReceptionReport, SeqNo};
 
@@ -249,7 +249,7 @@ fn expected(first: SeqNo, last: SeqNo) -> i64 {
 
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use crate::streams::register::{expected, packets_lost, ReceiverRegister};
 

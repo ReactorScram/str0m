@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::media::KeyframeRequestKind;
 use crate::rtp_::{

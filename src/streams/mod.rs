@@ -1,7 +1,6 @@
+use instant::{Duration, Instant};
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{self};
-use std::time::Duration;
-use std::time::Instant;
 
 use crate::format::CodecConfig;
 use crate::format::PayloadParams;

@@ -5,7 +5,7 @@ use std::fmt;
 use std::net::SocketAddr;
 use std::panic::UnwindSafe;
 use std::sync::Arc;
-use std::time::Instant;
+use instant::Instant;
 
 use sctp_proto::{Association, AssociationHandle, ClientConfig, DatagramEvent};
 use sctp_proto::{Endpoint, EndpointConfig, Stream, StreamEvent, Transmit};

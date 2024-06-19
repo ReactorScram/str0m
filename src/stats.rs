@@ -2,8 +2,9 @@
 
 use std::{
     collections::{HashMap, VecDeque},
-    time::{Duration, Instant},
 };
+
+use instant::{Duration, Instant};
 
 use crate::rtp_::{Mid, Rid};
 use crate::Bitrate;

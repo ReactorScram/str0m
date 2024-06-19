@@ -3,8 +3,8 @@ use std::fmt::Display;
 use std::num::{NonZeroU32, TryFromIntError};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
-use std::time::Duration;
-use std::time::Instant;
+use instant::Duration;
+use instant::Instant;
 
 use serde::{Deserialize, Serialize};
 

@@ -2,7 +2,7 @@ use std::collections::vec_deque;
 use std::collections::VecDeque;
 use std::fmt;
 use std::ops::RangeInclusive;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use super::{extend_u16, FeedbackMessageType, RtcpHeader, RtcpPacket};
 use super::{RtcpType, SeqNo, Ssrc, TransportType};
@@ -1348,7 +1348,7 @@ impl fmt::Debug for Twcc {
 #[allow(clippy::assign_op_pattern)]
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
+    use instant::Duration;
 
     use super::*;
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::collections::{BTreeMap, VecDeque};
 
 use std::fmt;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::format::CodecSpec;
 use crate::media::ToPayload;

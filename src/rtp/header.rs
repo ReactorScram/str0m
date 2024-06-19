@@ -330,7 +330,7 @@ impl Default for RtpHeader {
 mod test {
     use crate::util::already_happened;
     use crate::{io::DATAGRAM_MAX_PACKET_SIZE, rtp_::Extension};
-    use std::time::Duration;
+    use instant::Duration;
 
     use super::*;
 

@@ -2,7 +2,7 @@ use core::panic;
 use std::collections::VecDeque;
 use std::fmt;
 use std::ops::{Range, RangeInclusive};
-use std::time::Instant;
+use instant::Instant;
 
 use crate::rtp_::{ExtensionValues, MediaTime, RtpHeader, SenderInfo, SeqNo};
 

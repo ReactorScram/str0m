@@ -1,4 +1,4 @@
-use std::time::Instant;
+use instant::Instant;
 
 use crate::format::PayloadParams;
 use crate::rtp_::VideoOrientation;

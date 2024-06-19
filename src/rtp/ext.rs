@@ -8,7 +8,7 @@ use std::hash::Hasher;
 use std::panic::UnwindSafe;
 use std::str::from_utf8;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::util::already_happened;
 use crate::util::epoch_to_beginning;

@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use std::mem;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::util::already_happened;
 

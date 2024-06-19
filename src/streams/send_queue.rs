@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::packet::{QueuePriority, QueueSnapshot};
 use crate::util::not_happening;

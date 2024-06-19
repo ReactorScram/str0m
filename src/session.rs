@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::bwe::BweKind;
 use crate::crypto::KeyingMaterial;

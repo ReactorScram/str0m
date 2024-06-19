@@ -1,8 +1,8 @@
+use instant::{Duration, Instant};
 use std::{
     collections::VecDeque,
     iter::Sum,
     ops::{AddAssign, SubAssign},
-    time::{Duration, Instant},
 };
 
 /// Holds a history values of type T for up to a certain Duration, as well as the
@@ -58,7 +58,7 @@ where
 #[allow(clippy::unchecked_duration_subtraction)]
 #[cfg(test)]
 mod test {
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use super::ValueHistory;
 

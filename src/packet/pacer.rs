@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::rtp_::MAX_BLANK_PADDING_PAYLOAD_SIZE;
 use crate::rtp_::{Bitrate, DataSize, Mid};
@@ -608,7 +608,7 @@ impl QueueSnapshot {
 mod test {
     use std::ops::Range;
     use std::thread;
-    use std::time::{Duration, Instant};
+    use instant::{Duration, Instant};
 
     use crate::rtp_::{DataSize, RtpHeader};
 
@@ -1266,7 +1266,7 @@ mod test {
     /// A packet queue for use in tests of the pacer.
     mod queue {
         use std::collections::VecDeque;
-        use std::time::{Duration, Instant};
+        use instant::{Duration, Instant};
 
         use crate::rtp_::{DataSize, RtpHeader};
 

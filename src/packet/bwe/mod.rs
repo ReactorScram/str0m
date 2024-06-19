@@ -13,7 +13,7 @@ mod trendline_estimator;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::fmt;
-use std::time::{Duration, Instant};
+use instant::{Duration, Instant};
 
 use crate::rtp_::{Bitrate, DataSize, SeqNo, TwccSendRecord};
 use crate::util::already_happened;

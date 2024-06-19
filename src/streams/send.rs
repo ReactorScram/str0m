@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
-use std::time::Duration;
-use std::time::Instant;
+use instant::Duration;
+use instant::Instant;
 
 use crate::format::CodecConfig;
 use crate::format::PayloadParams;
