@@ -71,9 +71,9 @@ mod test {
     use std::net::IpAddr;
     use std::net::{Ipv4Addr, SocketAddr};
     use std::ops::{Deref, DerefMut};
-    use std::time::{Duration, Instant};
 
     use crate::io::{Protocol, StunMessage, StunPacket, STUN_TIMEOUT};
+    use instant::{Duration, Instant};
     use tracing::Span;
     use tracing_subscriber::util::SubscriberInitExt;
     use tracing_subscriber::util::SubscriberInitExt;

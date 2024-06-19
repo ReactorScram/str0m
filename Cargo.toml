@@ -18,6 +18,7 @@ _internal_dont_use_log_stats = []
 _internal_test_exports = []
 
 [dependencies]
+instant = "0.1.13"
 thiserror = "1.0.38"
 tracing = "0.1.37"
 fastrand = "2.0.1"

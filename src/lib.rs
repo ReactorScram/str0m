@@ -581,10 +581,10 @@ extern crate tracing;
 
 use bwe::{Bwe, BweKind};
 use change::{DirectApi, SdpApi};
+use instant::{Duration, Instant};
 use rtp::RawPacket;
 use std::fmt;
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
 use streams::RtpPacket;
 use streams::StreamPaused;
 use thiserror::Error;

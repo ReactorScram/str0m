@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
 
+use instant::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::io::{Id, StunClass, StunMethod, DATAGRAM_MTU_WARN};

@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt;
-use std::time::{Duration, Instant};
+
+use instant::{Duration, Instant};
 
 use crate::io::{stun_resend_delay, STUN_MAX_RETRANS};
 use crate::io::{Id, TransId, STUN_MAX_RTO_MILLIS};

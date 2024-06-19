@@ -1,6 +1,7 @@
 //! Data channel related types.
 
-use std::{fmt, str, time::Instant};
+use instant::Instant;
+use std::{fmt, str};
 
 use crate::sctp::RtcSctp;
 use crate::util::already_happened;
